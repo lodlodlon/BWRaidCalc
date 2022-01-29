@@ -2,7 +2,7 @@
 <html>
 <body>
 
-<h3>:( BWCalc</h3>
+<h3> Wonderland Raiding</h3>
 
 <p></p>
 
@@ -198,6 +198,10 @@ function getCritChanceShield() {
 	return getHeirloomBonusModified("Shield", "critChance")/100;
 }
 
+function getTrimpAttackShield() {
+	return getHeirloomBonusModified("Shield", "trimpAttack")/100;
+}
+
 function getHeirloomBonusModified(type, mod){
 	if (!game.heirlooms[type] || !game.heirlooms[type][mod]){
 		logToPage('oh noes'+ type + mod);
@@ -263,7 +267,6 @@ function getPlayerCritChance(){ //returns decimal: 1 = 100%
 
 function calculateDamage() {
 	var number = game.global.attack;
-	if(verboseAttack()) { logToPage("Damage start : " + number); }
 	
 	if (game.playerSpire.traps.Strength.owned){
 		number *= getStrengthTwrDamageMult();
@@ -275,6 +278,31 @@ function calculateDamage() {
 		if(verboseAttack()) { logToPage("Gator Mult : " + getGatorDamageMult()); }
 	}
 	
+	if (!(game.global.universe == 2)) {
+		let magbegin = (game.global.challengeActive == "Eradicated", 1, 230);
+		if (magbegin <= game.global.world) {
+			number *= (Math.pow(0.8, game.global.world - magbegin + 1));
+			if(verboseAttack()) { logToPage("Magma Mult : " + (Math.pow(0.8, game.global.world - magbegin + 1))); }
+		}
+	}
+	
+	
+	if (game.global.spireRows >= 15 || game.portal.Capable.level > 0){
+		/*number *= Fluffy.getDamageModifier();
+		getDamageModifier: function () {
+		var exp = this.getExp();
+		var prestigeBonus = Math.pow(this.prestigeDamageModifier, this.getCurrentPrestige());
+		var minLevel = (game.talents.fluffyAbility.purchased) ? 0 : 1;
+		if (exp[0] < minLevel || exp.length != 3) return 1;
+		var damageModifiers = this.getDamageModifiers();
+		var bonus = damageModifiers[exp[0]];
+		if (exp[0] >= damageModifiers.length || (exp[0] == this.getCapableLevel() && !(game.global.universe == 2 && this.getCapableLevel() == 10))) return 1 + ((bonus - 1) * prestigeBonus);
+		var remaining = (damageModifiers[exp[0] + 1] - bonus);
+		bonus += ((exp[1] / exp[2]) * remaining);
+		return 1 + ((bonus - 1) * prestigeBonus);
+		*/
+	}
+		
 	if (game.global.totalSquaredReward > 0){
 		number *= ((game.global.totalSquaredReward / 100) + 1);
 		if(verboseAttack()) { logToPage("C2 Mult : " + ((game.global.totalSquaredReward / 100) + 1)); }
@@ -300,15 +328,46 @@ function calculateDamage() {
 		if(verboseAttack()) { logToPage("MMM Mult : " + getMMMDamageMult()); }
 	}
 	
+	if (game.talents.herbalist.purchased) {
+		let herbMult = 1;
+		if (game.resources.food.owned > 1) {
+				herbMult = 1 + (Math.log10(game.resources.food.owned) / 83.3);
+				if (herbMult < 1 || isNumberBad(herbMult)) herbMult = 1;
+		}
+		number *= herbMult;
+		if(verboseAttack()) { logToPage("Herb Mult : " + herbMult); }
+	}
+	
+	number *= (getTrimpAttackShield() + 1);
+	if(verboseAttack()) { logToPage("Shield attack Mult : " + (getTrimpAttackShield() + 1)); }
+	
+	
 	if (game.global.roboTrimpLevel > 0){
 		number *= ((0.2 * game.global.roboTrimpLevel) + 1);
 		if(verboseAttack()) { logToPage("Robotrimp Mult : " + ((0.2 * game.global.roboTrimpLevel) + 1)); }
+	}
+	
+	if (game.global.formation == 2) {
+		number *= 4;
+		if(verboseAttack()) { logToPage("D Formation Mult : " + 4); }
 	}
 	
 	if (game.global.antiStacks > 0) {
 		number *= getAntiDamageMult();
 		if(verboseAttack()) { logToPage("Antic Mult : " + getAntiDamageMult()); }
 	}
+	
+	if (game.portal.Power_II.level > 0) {
+		number *= (1+game.portal.Power_II.level*0.01);
+		if(verboseAttack()) { logToPage("Power_II Mult : " + (1+game.portal.Power_II.level*0.01)); }
+	}
+	
+	
+	if (game.portal.Power.level > 0) {
+		number *= (1+game.portal.Power.level*0.05);
+		if(verboseAttack()) { logToPage("Power Mult : " + (1+game.portal.Power.level*0.05)); }
+	}
+	
 	
 	if (game.global.achievementBonus > 0){
 		number *= (1 + (game.global.achievementBonus / 100));
@@ -339,6 +398,16 @@ function calculateDamage() {
 		number *= game.goldenUpgrades.Battle.currentBonus + 1;
 		if(verboseAttack()) { logToPage("Gattle Mult : " + (game.goldenUpgrades.Battle.currentBonus+1)); }
 	}
+	
+	if (game.upgrades.Coordination.done > 0) {
+		number *= Math.pow(1.25,game.upgrades.Coordination.done);
+	if(verboseAttack()) { logToPage("Coords mult : " + Math.pow(1.25,game.upgrades.Coordination.done)); }
+	}
+	
+	if(verboseAttack()) { logToPage("Damage start : " + game.global.attack); }
+	
+	
+	if(verboseAttack()) { logToPage("Damage final : " + number); }
 	
 	return number;
 }
@@ -394,6 +463,11 @@ function getGatorDamageMult() {
 	} else {
 		return (game.jobs.Amalgamator.owned*0.5 + 1);
 	}
+}
+
+
+function isNumberBad(number) {
+	return (isNaN(number) || typeof number === 'undefined' || number < 0 || !isFinite(number) || number == null);
 }
 
 //Math.floor((game.global.lastOnline - game.global.zoneStarted) / 600000
@@ -459,10 +533,9 @@ function getPlayerCritChance(){ //returns decimal: 1 = 100%
 
 MMM ticks in game when game is paused, won't fix for now, most people will use immediately and game won't get out of sync
 
-
+Not sure what happens if Shield fails to have mod looked up
 
 */
-
 
 
 
